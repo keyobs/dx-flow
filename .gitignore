@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+/package-lock.json
+/yarn.lock
+/pnpm-lock.yaml
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# env
+.env
+.env.local
+
+# Prod/dist
+/dist
+/build
+
+# Packages output
+*.tgz

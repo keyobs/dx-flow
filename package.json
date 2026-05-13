@@ -1,0 +1,36 @@
+{
+  "name": "@keyobs/dx-flow",
+  "version": "2.1.0",
+  "description": "UNIFY CLI to install quality tools and configs.",
+  "author": "keyobs",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/keyobs/dx-flow.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "bin": {
+    "dx-flow": "./bin/dx-flow.mjs"
+  },
+  "files": [
+    "bin",
+    "scripts",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=22.21.1"
+  },
+  "scripts": {
+    "prepublishOnly": "node scripts/verify-official-publish.mjs",
+    "publish:github": "npm publish",
+    "release:patch": "npm version patch -m \"chore(release): %s\"",
+    "release:minor": "node scripts/version-bump.mjs minor",
+    "release:major": "node scripts/version-bump.mjs major",
+    "qa:new": "node scripts/qa/qa-new.mjs",
+    "qa:validate": "node scripts/qa/qa-release.mjs validate",
+    "qa:reset": "node scripts/qa/qa-release.mjs reset"
+  }
+}

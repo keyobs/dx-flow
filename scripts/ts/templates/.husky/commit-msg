@@ -1,0 +1,22 @@
+#!/usr/bin/env node
+'use strict';
+const { spawnSync } = require('node:child_process');
+
+const isWindows = process.platform === 'win32';
+const commitMsgFile = process.argv[2];
+
+console.log('📝 Validating commit message...');
+
+const result = spawnSync(
+  'npx',
+  ['--no', '--', 'commitlint', '--edit', commitMsgFile],
+  { stdio: 'inherit', shell: isWindows }
+);
+
+if (result.status === 0) {
+  console.log('✅ Commit message follows conventional standards.');
+} else {
+  console.log('❌ Invalid commit format!');
+  console.log('💡 Use: <type>(<scope>): tell why you changed that');
+  process.exit(1);
+}
