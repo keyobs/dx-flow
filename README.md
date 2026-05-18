@@ -1,7 +1,7 @@
 # DX-FLOW
 *DX for Developper Experience*
 
-dx-flow is a Node CLI that bootstraps code quality, Git hooks, versioning, and release workflows for JavaScript and TypeScript projects.
+dx-flow is a Node CLI that bootstraps code quality, Git hooks, versioning, and release workflows for JS/TS projects.
 
 Official package: `@keyobs/dx-flow`
 
@@ -82,7 +82,7 @@ Supported package managers:
 
 ## Shortcuts
 
-- **Skip tests on commit**: `git commit-skip-tests -m "..."`  
+- **Skip tests on commit**: `dx-flow commit --skip-tests -m "..."`  
 skips pre-commit tests only (lint and typecheck still run).
 
 <br>
