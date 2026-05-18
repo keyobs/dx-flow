@@ -1,41 +1,24 @@
 # Changelog
 
-# 🗒️ [2.1.0] - 2026-02-13
+# 🗒️ [3.0.0] - 2026-05-18
 ### Added
-- commitlint : new keywords : clean
-- Update doc
+- Install mode choice: copy scripts or install dx-flow as a project dependency.
+- CLI commands: ```dx-flow qa:new```, ```dx-flow qa:validate```, ```dx-flow qa:reset```.
+- CLI release commands: ```dx-flow release patch```, ```dx-flow release minor```, ```dx-flow release major```.
+- Cross-platform commit command: ```dx-flow commit --skip-tests```.
+- Package manager support for npm, pnpm, yarn, and bun.
 
-# 🗒️ [2.0.1] - 2026-01-30
-### Fixes
-- fixes to launch project on windows
+### Changed
+- CLI compatibility for Linux, Windows, and macOS.
+- QA and release scripts inside dx-flow in dependency mode.
+- Update Husky hooks to call dx-flow commands in dependency mode.
+- Replace Unix-only skip-test alias with cross-platform CLI command.
+
 
 # 🗒️ [2.0.0] - 2026-01-30
 ### Changed
 - Convert project to node module
-
-# 🗒️ [1.3.0] - 2026-01-29
-### Added
-- commitlint : new keywords : core, config, merge
-
-# 🗒️ [1.2.0] - 2026-01-28
-### Added
-- husky hack : commit Alias to allow skiping pre-commit tests at commit.
-- commitlint : now accepts uppercases
-
-# 🗒️ [1.1.0] - 2026-01-22
-### Added
-- typescript config
-- release commands to automate version incrementation 
-
-### Changed
-- biomejs angular template ignore .html files
-- husky: handle only staged files
-
-<br>
-
-# 🗒️ [1.0.1] - 2026-01-09
-- Initial release.
-- npm publish workflow (dist package.json).
+- Windows compatibility
 
 <br>
 
