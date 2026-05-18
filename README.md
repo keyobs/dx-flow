@@ -1,7 +1,7 @@
 # DX-FLOW
 *DX for Developper Experience*
 
-DX Flow CLI automates the installation and configuration of a bunch of tools on a project.
+dx-flow is a Node CLI that bootstraps code quality, Git hooks, versioning, and release workflows for JavaScript and TypeScript projects.
 
 Official package: `@keyobs/dx-flow`
 
@@ -17,14 +17,29 @@ This repository is public and can be forked freely. Only Keyobs publishes the of
 
 <br>
 
-## Quick setup
+## Quick Setup
 
-dx-flow can be executed via `npx` from GitHub Packages (no dependency is added to the app).
+dx-flow can be executed via `npx` from GitHub Packages.
 
 **Run dx-flow in a consuming app**
 
 ```
 npx @keyobs/dx-flow@latest run
+```
+
+The setup asks for:
+- the target framework
+- the install mode
+
+Install modes:
+- `copy`: default mode; copies QA and release scripts into the consuming project.
+- `dependency`: installs `@keyobs/dx-flow` as a dev dependency; QA, release, and hook commands run through the `dx-flow` binary.
+
+Non-interactive examples:
+
+```
+npx @keyobs/dx-flow@latest run --mode copy
+npx @keyobs/dx-flow@latest run --mode dependency
 ```
 
 **Update dx-flow to the latest version (global) and run**
@@ -45,6 +60,13 @@ npx @keyobs/dx-flow run --force
 - **Configs**: Deploys `biome.json` and `commitlint.config.js`.
 - **Git Hooks**: Configures Husky hooks for validation.
 - **Scripts**: Adds `lint`, `format`, `check`, and `prepare` to `package.json`.
+- **Modes**: Supports copied scripts or a managed `@keyobs/dx-flow` dependency.
+
+Supported package managers:
+- npm
+- pnpm
+- yarn
+- bun
 
 <br>
 
@@ -99,6 +121,14 @@ These commands **bump the version, tag, and <u>commit</u> locally.**
 | `npm run release:minor` | New features | `1.0.0` → `1.1.0` |
 | `npm run release:major` | Breaking changes | `1.0.0` → `2.0.0` |
 
+Direct CLI commands:
+
+```
+dx-flow release patch
+dx-flow release minor
+dx-flow release major
+```
+
 **Windows note**
 
 If you run `npm version` manually on Windows (PowerShell/cmd), use **double quotes** for the message:
@@ -116,13 +146,21 @@ npm version patch -m "chore(release): %s"
 
 `qa:validate` and `qa:reset` run the same command; both names stay for dev convenience.
 
+Direct CLI commands:
+
+```
+dx-flow qa:new
+dx-flow qa:validate
+dx-flow qa:reset
+```
+
 <br>
 
 ## GitHub Packages Setup
 
 DX-FLOW is published as the official private package `@keyobs/dx-flow` on GitHub Packages.
 
-Configure npm to use GitHub Packages for the `@keyobs` scope:
+Configure npm-compatible clients to use GitHub Packages for the `@keyobs` scope:
 
 ```
 @keyobs:registry=https://npm.pkg.github.com
@@ -139,6 +177,11 @@ For personal machines, you can also keep the token in your user-level npm config
 ```
 //npm.pkg.github.com/:_authToken=TOKEN
 ```
+
+In `dependency` mode, dx-flow adds the registry line to the consuming project's `.npmrc` if it is missing. It never writes a token.
+
+If installing `@keyobs/dx-flow` fails, dx-flow offers to continue in `copy` mode.
+
 
 ## Publishing
 

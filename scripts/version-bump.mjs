@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -22,6 +22,7 @@ const minor = Number(match[2]);
 const nextVersion =
   bumpType === "minor" ? `${major}.${minor + 1}.0` : `${major + 1}.0.0`;
 
-execSync(`npm version ${nextVersion} -m "chore(release): %s"`, {
+execFileSync("npm", ["version", nextVersion, "-m", "chore(release): %s"], {
   stdio: "inherit",
+  shell: process.platform === "win32",
 });

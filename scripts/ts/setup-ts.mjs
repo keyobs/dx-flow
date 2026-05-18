@@ -6,10 +6,12 @@ import { dirname, join, resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { chmod, copyFile as copyFileFs, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import process from 'node:process';
+import readline from 'node:readline';
 
 const isWindows = process.platform === 'win32';
+const dxFlowPackageName = '@keyobs/dx-flow';
 const args = process.argv.slice(2);
-const { force, projectDir, framework } = parseArgs(args);
+const { force, projectDir, framework, mode } = parseArgs(args);
 
 const resolvedProjectDir = resolve(process.cwd(), projectDir);
 const projectPackageJson = join(resolvedProjectDir, 'package.json');
@@ -22,23 +24,40 @@ const tsDir = dirname(fileURLToPath(import.meta.url));
 const templateDir = join(tsDir, 'templates');
 const huskyTemplateDir = join(templateDir, '.husky');
 const qaDir = join(tsDir, '../qa');
+const packageManager = detectPackageManager(resolvedProjectDir);
 
 process.chdir(resolvedProjectDir);
 
-await installDependencies();
+let effectiveMode = mode;
+
+await installDependencies(packageManager);
+
+if (effectiveMode === 'dependency') {
+  await ensureGitHubPackagesNpmrc(resolvedProjectDir);
+  const installed = await installDxFlowDependency(packageManager);
+  if (!installed) {
+    effectiveMode = await promptCopyFallback();
+    if (effectiveMode !== 'copy') {
+      console.error('❌ Dependency mode cannot continue without @keyobs/dx-flow.');
+      process.exit(1);
+    }
+  }
+}
 
 await copyFrameworkConfig(framework);
 await updateBiomeSchema();
 await copyTemplateFile(join(templateDir, 'commitlint.config.mjs'), join(resolvedProjectDir, 'commitlint.config.mjs'));
 
 console.log('Adding node commands...');
-await updatePackageJson(resolvedProjectDir, force);
+await updatePackageJson(resolvedProjectDir, force, effectiveMode);
 
-await mkdir(join(resolvedProjectDir, 'scripts'), { recursive: true });
-await copyTemplateFile(join(tsDir, '../version-bump.mjs'), join(resolvedProjectDir, 'scripts/version-bump.mjs'));
-await copyTemplateDir(qaDir, join(resolvedProjectDir, 'scripts/qa'), force);
+if (effectiveMode === 'copy') {
+  await mkdir(join(resolvedProjectDir, 'scripts'), { recursive: true });
+  await copyTemplateFile(join(tsDir, '../version-bump.mjs'), join(resolvedProjectDir, 'scripts/version-bump.mjs'));
+  await copyTemplateDir(qaDir, join(resolvedProjectDir, 'scripts/qa'), force);
+}
 
-await configureHusky(resolvedProjectDir, huskyTemplateDir, force);
+await configureHusky(resolvedProjectDir, huskyTemplateDir, force, effectiveMode);
 
 console.log('✨ Setup completed successfully.');
 
@@ -46,6 +65,7 @@ function parseArgs(inputArgs) {
   let parsedForce = false;
   let parsedProjectDir = '.';
   let parsedFramework = '';
+  let parsedMode = 'copy';
 
   const positional = [];
   for (let i = 0; i < inputArgs.length; i += 1) {
@@ -57,6 +77,9 @@ function parseArgs(inputArgs) {
     } else if (arg === '--framework') {
       parsedFramework = inputArgs[i + 1] || parsedFramework;
       i += 1;
+    } else if (arg === '--mode') {
+      parsedMode = inputArgs[i + 1] || parsedMode;
+      i += 1;
     } else positional.push(arg);
   }
 
@@ -66,21 +89,22 @@ function parseArgs(inputArgs) {
   if (positional.length > 0 && parsedProjectDir === '.') parsedProjectDir = positional.shift();
   if (positional.length > 0 && !parsedFramework) parsedFramework = positional.shift();
 
-  return { force: parsedForce, projectDir: parsedProjectDir, framework: parsedFramework };
+  if (parsedMode !== 'copy' && parsedMode !== 'dependency') {
+    console.error('❌ Invalid install mode. Use copy or dependency.');
+    process.exit(1);
+  }
+
+  return { force: parsedForce, projectDir: parsedProjectDir, framework: parsedFramework, mode: parsedMode };
 }
 
-async function installDependencies() {
-  console.log('📦 Installing dependencies...');
-  await runCommand('npm', [
-    'install',
-    '-D',
+async function installDependencies(pm) {
+  console.log(`📦 Installing dependencies with ${pm}...`);
+  await runInstall(pm, [
     '@biomejs/biome@latest',
     '@commitlint/cli@latest',
     '@commitlint/config-conventional@latest',
     'husky@latest',
     'lint-staged@latest',
-    '--no-audit',
-    '--no-fund',
   ]);
 }
 
@@ -114,10 +138,9 @@ async function updateBiomeSchema() {
 
 async function getBiomeVersion() {
   try {
-    const { stdout } = await runCommandCapture('npm', ['list', '@biomejs/biome', '--depth=0', '--json']);
-    if (!stdout) return '';
-    const data = JSON.parse(stdout);
-    return data?.dependencies?.['@biomejs/biome']?.version || '';
+    const biomePackageJson = join(resolvedProjectDir, 'node_modules/@biomejs/biome/package.json');
+    const data = JSON.parse(await readFile(biomePackageJson, 'utf8'));
+    return data?.version || '';
   } catch {
     return '';
   }
@@ -152,19 +175,29 @@ async function copyTemplateDir(src, dest, allowForce) {
   console.log(`✅ Installed: ${dest}`);
 }
 
-async function updatePackageJson(projectRoot, allowForce) {
+async function updatePackageJson(projectRoot, allowForce, installMode) {
   const pkgPath = join(projectRoot, 'package.json');
   if (!existsSync(pkgPath)) return;
 
   const pkg = JSON.parse(await readFile(pkgPath, 'utf8'));
   pkg.scripts = pkg.scripts || {};
 
-  const updates = {
+  const baseUpdates = {
     prepare: 'husky',
     lint: 'biome check .',
     'lint:fix': 'biome check --write .',
     format: 'biome format --write .',
     check: 'tsc --noEmit',
+  };
+
+  const workflowUpdates = installMode === 'dependency' ? {
+    'release:patch': 'dx-flow release patch',
+    'release:minor': 'dx-flow release minor',
+    'release:major': 'dx-flow release major',
+    'qa:new': 'dx-flow qa:new',
+    'qa:validate': 'dx-flow qa:validate',
+    'qa:reset': 'dx-flow qa:reset',
+  } : {
     'release:patch': 'npm version patch -m "chore(release): %s"',
     'release:minor': 'node scripts/version-bump.mjs minor',
     'release:major': 'node scripts/version-bump.mjs major',
@@ -172,6 +205,8 @@ async function updatePackageJson(projectRoot, allowForce) {
     'qa:validate': 'node scripts/qa/qa-release.mjs validate',
     'qa:reset': 'node scripts/qa/qa-release.mjs reset',
   };
+
+  const updates = { ...baseUpdates, ...workflowUpdates };
 
   for (const [key, val] of Object.entries(updates)) {
     if (!pkg.scripts[key] || allowForce) pkg.scripts[key] = val;
@@ -184,15 +219,21 @@ async function updatePackageJson(projectRoot, allowForce) {
   await writeFile(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 }
 
-async function configureHusky(projectRoot, huskyDir, allowForce) {
+async function configureHusky(projectRoot, huskyDir, allowForce, installMode) {
   if (!existsSync(join(projectRoot, '.git'))) return;
 
   console.log('Configuring Husky hooks...');
-  await runCommand('npx', ['husky'], { cwd: projectRoot });
+  await runPackageExecutor(packageManager, 'husky', [], { cwd: projectRoot });
 
-  await copyTemplateFile(join(huskyDir, 'commit-msg'), join(projectRoot, '.husky/commit-msg'));
-  await copyTemplateFile(join(huskyDir, 'pre-commit'), join(projectRoot, '.husky/pre-commit'));
-  await copyTemplateFile(join(huskyDir, 'pre-push'), join(projectRoot, '.husky/pre-push'));
+  if (installMode === 'dependency') {
+    await writeDependencyHook(join(projectRoot, '.husky/commit-msg'), 'hook:commit-msg "$1"', allowForce);
+    await writeDependencyHook(join(projectRoot, '.husky/pre-commit'), 'hook:pre-commit', allowForce);
+    await writeDependencyHook(join(projectRoot, '.husky/pre-push'), 'hook:pre-push', allowForce);
+  } else {
+    await copyTemplateFile(join(huskyDir, 'commit-msg'), join(projectRoot, '.husky/commit-msg'));
+    await copyTemplateFile(join(huskyDir, 'pre-commit'), join(projectRoot, '.husky/pre-commit'));
+    await copyTemplateFile(join(huskyDir, 'pre-push'), join(projectRoot, '.husky/pre-push'));
+  }
 
   await safeChmod(join(projectRoot, '.husky/commit-msg'));
   await safeChmod(join(projectRoot, '.husky/pre-commit'));
@@ -212,6 +253,16 @@ async function configureHusky(projectRoot, huskyDir, allowForce) {
   console.log('✅ Installed git alias: commit-skip-tests');
 }
 
+async function writeDependencyHook(dest, command, allowForce) {
+  if (existsSync(dest) && !allowForce) {
+    console.log(`⚠️  ${dest} already exists. Skipping...`);
+    return;
+  }
+  await mkdir(dirname(dest), { recursive: true });
+  await writeFile(dest, `#!/bin/sh\nnpx --no dx-flow ${command}\n`);
+  console.log(`✅ Installed: ${dest}`);
+}
+
 async function gitAliasExists(projectRoot) {
   const result = await runCommandCapture('git', ['config', '--get', 'alias.commit-skip-tests'], {
     cwd: projectRoot,
@@ -226,6 +277,64 @@ async function safeChmod(filePath) {
   } catch {
     // Ignore chmod errors on unsupported platforms.
   }
+}
+
+function detectPackageManager(projectRoot) {
+  if (existsSync(join(projectRoot, 'pnpm-lock.yaml'))) return 'pnpm';
+  if (existsSync(join(projectRoot, 'yarn.lock'))) return 'yarn';
+  if (existsSync(join(projectRoot, 'bun.lockb')) || existsSync(join(projectRoot, 'bun.lock'))) return 'bun';
+  return 'npm';
+}
+
+async function runInstall(pm, packages) {
+  if (pm === 'pnpm') return runCommand('pnpm', ['add', '-D', ...packages]);
+  if (pm === 'yarn') return runCommand('yarn', ['add', '-D', ...packages]);
+  if (pm === 'bun') return runCommand('bun', ['add', '-d', ...packages]);
+  return runCommand('npm', ['install', '-D', ...packages, '--no-audit', '--no-fund']);
+}
+
+async function runPackageExecutor(pm, binaryName, binaryArgs, options = {}) {
+  if (pm === 'pnpm') return runCommand('pnpm', ['exec', binaryName, ...binaryArgs], options);
+  if (pm === 'yarn') return runCommand('yarn', [binaryName, ...binaryArgs], options);
+  if (pm === 'bun') return runCommand('bunx', [binaryName, ...binaryArgs], options);
+  return runCommand('npx', [binaryName, ...binaryArgs], options);
+}
+
+async function ensureGitHubPackagesNpmrc(projectRoot) {
+  const npmrcPath = join(projectRoot, '.npmrc');
+  const registryLine = '@keyobs:registry=https://npm.pkg.github.com';
+  let content = '';
+  if (existsSync(npmrcPath)) {
+    content = await readFile(npmrcPath, 'utf8');
+  }
+  if (content.includes(registryLine)) return;
+
+  const nextContent = content.trim()
+    ? `${content.replace(/\s*$/, '\n')}${registryLine}\n`
+    : `${registryLine}\n`;
+  await writeFile(npmrcPath, nextContent);
+  console.log('✅ Configured .npmrc for @keyobs GitHub Packages registry.');
+}
+
+async function installDxFlowDependency(pm) {
+  try {
+    await runInstall(pm, [`${dxFlowPackageName}@latest`]);
+    return true;
+  } catch {
+    console.error(`❌ Could not install ${dxFlowPackageName} from GitHub Packages.`);
+    console.error('Make sure your package manager is authenticated with a GitHub token that has read:packages.');
+    return false;
+  }
+}
+
+function promptCopyFallback() {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question('Continue in copy mode instead? [Y/n] ', (answer) => {
+      rl.close();
+      resolve(answer.trim().toLowerCase() === 'n' ? 'dependency' : 'copy');
+    });
+  });
 }
 
 function runCommand(command, argsList, options = {}) {

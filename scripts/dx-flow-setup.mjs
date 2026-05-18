@@ -14,10 +14,15 @@ const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
 const args = process.argv.slice(2);
 let force = false;
 let projectDir = '.';
+let mode = '';
 
-for (const arg of args) {
+for (let i = 0; i < args.length; i += 1) {
+  const arg = args[i];
   if (arg === '--force') force = true;
-  else if (projectDir === '.') projectDir = arg;
+  else if (arg === '--mode') {
+    mode = args[i + 1] || mode;
+    i += 1;
+  } else if (projectDir === '.') projectDir = arg;
 }
 
 console.log(`\n  🛡️  DX-FLOW v${pkg.version}`);
@@ -31,6 +36,11 @@ if (!existsSync(targetPackageJson)) {
 }
 
 const framework = await promptFramework();
+if (!mode) mode = await promptInstallMode();
+if (mode !== 'copy' && mode !== 'dependency') {
+  console.error('❌ Invalid install mode. Use copy or dependency.');
+  process.exit(1);
+}
 const setupTsPath = join(__dirname, 'ts/setup-ts.mjs');
 
 if (!existsSync(setupTsPath)) {
@@ -38,11 +48,11 @@ if (!existsSync(setupTsPath)) {
   process.exit(1);
 }
 
-console.log(`Launch config for ${framework}...`);
+console.log(`Launch config for ${framework} in ${mode} mode...`);
 
 const setupArgs = [];
 if (force) setupArgs.push('--force');
-setupArgs.push('--project', projectDir, '--framework', framework);
+setupArgs.push('--project', projectDir, '--framework', framework, '--mode', mode);
 
 const child = spawn(process.execPath, [setupTsPath, ...setupArgs], { stdio: 'inherit' });
 child.on('error', (err) => {
@@ -62,6 +72,36 @@ function promptFramework() {
       const idx = parseInt(ans, 10) - 1;
       if (options[idx]) { rl.close(); resolve(options[idx]); }
       else { console.error('❌ Invalid choice'); ask(); }
+    });
+    ask();
+  });
+}
+
+function promptInstallMode() {
+  return new Promise((resolve) => {
+    const options = [
+      { value: 'copy', label: 'copy files into this project' },
+      { value: 'dependency', label: 'install @keyobs/dx-flow as a dependency' },
+    ];
+    console.error('📦 Choose install mode');
+    options.forEach((opt, i) => console.error(`${i + 1}) ${opt.value} (${opt.label})`));
+    console.error('Press Enter for copy.');
+
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const ask = () => rl.question('#? ', (ans) => {
+      if (!ans.trim()) {
+        rl.close();
+        resolve('copy');
+        return;
+      }
+      const idx = parseInt(ans, 10) - 1;
+      if (options[idx]) {
+        rl.close();
+        resolve(options[idx].value);
+      } else {
+        console.error('❌ Invalid choice');
+        ask();
+      }
     });
     ask();
   });
