@@ -28,6 +28,8 @@ if (command === 'run') {
   runScript('../scripts/qa/qa-release.mjs', ['reset', ...args.slice(1)], 'scripts/qa/');
 } else if (command === 'release') {
   runRelease(args.slice(1));
+} else if (command === 'commit') {
+  runScript('../scripts/git/commit.mjs', args.slice(1), 'scripts/git/');
 } else if (command === 'hook:commit-msg') {
   runScript('../scripts/hooks/commit-msg.mjs', args.slice(1), 'scripts/hooks/');
 } else if (command === 'hook:pre-commit') {
@@ -42,6 +44,7 @@ if (command === 'run') {
   console.log('  qa:validate');
   console.log('  qa:reset');
   console.log('  release <patch|minor|major>');
+  console.log('  commit [--skip-tests] <git commit args>');
   console.log('  hook:commit-msg <commit-msg-file>');
   console.log('  hook:pre-commit');
   console.log('  hook:pre-push');

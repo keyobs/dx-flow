@@ -238,19 +238,6 @@ async function configureHusky(projectRoot, huskyDir, allowForce, installMode) {
   await safeChmod(join(projectRoot, '.husky/commit-msg'));
   await safeChmod(join(projectRoot, '.husky/pre-commit'));
   await safeChmod(join(projectRoot, '.husky/pre-push'));
-
-  const aliasExists = await gitAliasExists(projectRoot);
-  if (aliasExists && !allowForce) {
-    console.log('⚠️  git alias commit-skip-tests already exists. Skipping...');
-    return;
-  }
-
-  const aliasValue = '!f() { SKIP_TESTS=1 git commit "$@"; }; f';
-  await runCommand('git', ['config', '--local', 'alias.commit-skip-tests', aliasValue], {
-    cwd: projectRoot,
-    shell: false,
-  });
-  console.log('✅ Installed git alias: commit-skip-tests');
 }
 
 async function writeDependencyHook(dest, command, allowForce) {
@@ -261,14 +248,6 @@ async function writeDependencyHook(dest, command, allowForce) {
   await mkdir(dirname(dest), { recursive: true });
   await writeFile(dest, `#!/bin/sh\nnpx --no dx-flow ${command}\n`);
   console.log(`✅ Installed: ${dest}`);
-}
-
-async function gitAliasExists(projectRoot) {
-  const result = await runCommandCapture('git', ['config', '--get', 'alias.commit-skip-tests'], {
-    cwd: projectRoot,
-    shell: false,
-  });
-  return result.code === 0;
 }
 
 async function safeChmod(filePath) {
