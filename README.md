@@ -44,6 +44,19 @@ npx @keyobs/dx-flow@latest run --mode copy
 npx @keyobs/dx-flow@latest run --mode dependency
 ```
 
+Available CLI commands:
+
+```
+dx-flow run
+dx-flow qa:new
+dx-flow qa:validate
+dx-flow qa:reset
+dx-flow release patch
+dx-flow release minor
+dx-flow release major
+dx-flow commit --skip-tests -m "..."
+```
+
 **Update dx-flow to the latest version (global) and run**
 
 ```
@@ -70,6 +83,8 @@ Supported package managers:
 - yarn
 - bun
 
+Package manager support is based on project lockfiles. Hooks use the detected package manager for `lint-staged`, `jest`, `tsc`, and `test:run`.
+
 <br>
 
 ## Safety Standards
@@ -89,6 +104,20 @@ skips pre-commit tests only (lint and typecheck still run).
 
 <br>
 
+## Husky Hooks
+
+Husky hook templates are the single source of truth:
+
+```
+scripts/ts/templates/.husky/commit-msg
+scripts/ts/templates/.husky/pre-commit
+scripts/ts/templates/.husky/pre-push
+```
+
+These files are copied as-is into consuming projects in both `copy` and `dependency` modes.
+
+<br>
+
 ## Project Structure
 
 ```
@@ -97,6 +126,7 @@ skips pre-commit tests only (lint and typecheck still run).
 │   └── dx-flow.sh                    # CLI entry point and path resolver
 |       dx-flow.mjs
 ├── scripts/
+│   ├── git                           # Git helper commands
 │   ├── qa                            # QA scripts
 │   ├── dx-flow-setup.mjs             # Main controller and framework selector
 │   └── ts/
@@ -108,6 +138,7 @@ skips pre-commit tests only (lint and typecheck still run).
 │               ├── pre-commit        # Branch protection and linting
 │               ├── pre-push          # Test validation
 │               └── commit-msg        # Commit message enforcement
+└── test/                             # Node test runner tests
 ```
 
 <br>
@@ -233,6 +264,13 @@ Create / Update the package :
 ```
 # run at every change
 npm pack
+```
+
+Run local checks:
+
+```
+npm run check
+npm test
 ```
 
 <br>
