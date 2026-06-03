@@ -57,7 +57,7 @@ if (effectiveMode === 'copy') {
   await copyTemplateDir(qaDir, join(resolvedProjectDir, 'scripts/qa'), force);
 }
 
-await configureHusky(resolvedProjectDir, huskyTemplateDir, force, effectiveMode);
+await configureHusky(resolvedProjectDir, huskyTemplateDir, force);
 
 console.log('✨ Setup completed successfully.');
 
@@ -219,35 +219,19 @@ async function updatePackageJson(projectRoot, allowForce, installMode) {
   await writeFile(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 }
 
-async function configureHusky(projectRoot, huskyDir, allowForce, installMode) {
+async function configureHusky(projectRoot, huskyDir, allowForce) {
   if (!existsSync(join(projectRoot, '.git'))) return;
 
   console.log('Configuring Husky hooks...');
   await runPackageExecutor(packageManager, 'husky', [], { cwd: projectRoot });
 
-  if (installMode === 'dependency') {
-    await writeDependencyHook(join(projectRoot, '.husky/commit-msg'), 'hook:commit-msg "$1"', allowForce);
-    await writeDependencyHook(join(projectRoot, '.husky/pre-commit'), 'hook:pre-commit', allowForce);
-    await writeDependencyHook(join(projectRoot, '.husky/pre-push'), 'hook:pre-push', allowForce);
-  } else {
-    await copyTemplateFile(join(huskyDir, 'commit-msg'), join(projectRoot, '.husky/commit-msg'));
-    await copyTemplateFile(join(huskyDir, 'pre-commit'), join(projectRoot, '.husky/pre-commit'));
-    await copyTemplateFile(join(huskyDir, 'pre-push'), join(projectRoot, '.husky/pre-push'));
-  }
+  await copyTemplateFile(join(huskyDir, 'commit-msg'), join(projectRoot, '.husky/commit-msg'));
+  await copyTemplateFile(join(huskyDir, 'pre-commit'), join(projectRoot, '.husky/pre-commit'));
+  await copyTemplateFile(join(huskyDir, 'pre-push'), join(projectRoot, '.husky/pre-push'));
 
   await safeChmod(join(projectRoot, '.husky/commit-msg'));
   await safeChmod(join(projectRoot, '.husky/pre-commit'));
   await safeChmod(join(projectRoot, '.husky/pre-push'));
-}
-
-async function writeDependencyHook(dest, command, allowForce) {
-  if (existsSync(dest) && !allowForce) {
-    console.log(`⚠️  ${dest} already exists. Skipping...`);
-    return;
-  }
-  await mkdir(dirname(dest), { recursive: true });
-  await writeFile(dest, `#!/bin/sh\nnpx --no dx-flow ${command}\n`);
-  console.log(`✅ Installed: ${dest}`);
 }
 
 async function safeChmod(filePath) {
