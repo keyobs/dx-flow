@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -71,6 +71,14 @@ test("husky hooks support npm, pnpm, yarn, and bun commands", () => {
   assert.match(prePush, /yarn'.*\[scriptName/s);
   assert.match(prePush, /bun'.*\['run', scriptName/s);
   assert.doesNotMatch(prePush, /run\('npm', \['run', 'test:run'\]\)/);
+});
+
+test("hook commands are not exposed because templates are the single source of truth", () => {
+  const cli = readFileSync(join(rootDir, "bin/dx-flow.mjs"), "utf8");
+  assert.doesNotMatch(cli, /hook:commit-msg/);
+  assert.doesNotMatch(cli, /hook:pre-commit/);
+  assert.doesNotMatch(cli, /hook:pre-push/);
+  assert.equal(existsSync(join(rootDir, "scripts/hooks")), false);
 });
 
 function makeTempProject(pkg = {}) {
