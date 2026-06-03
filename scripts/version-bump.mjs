@@ -22,7 +22,35 @@ const minor = Number(match[2]);
 const nextVersion =
   bumpType === "minor" ? `${major}.${minor + 1}.0` : `${major + 1}.0.0`;
 
-execFileSync("npm", ["version", nextVersion, "-m", "chore(release): %s"], {
-  stdio: "inherit",
-  shell: process.platform === "win32",
-});
+const changes = getWorkingTreeChanges();
+if (changes) {
+  console.error("Cannot bump version: Git working directory is not clean.");
+  console.error("");
+  console.error(changes);
+  console.error("");
+  console.error("Commit or stash these changes before running the release command.");
+  process.exit(1);
+}
+
+try {
+  execFileSync("npm", ["version", nextVersion, "-m", "chore(release): %s"], {
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  });
+} catch {
+  console.error(`Failed to bump version to ${nextVersion}.`);
+  process.exit(1);
+}
+
+function getWorkingTreeChanges() {
+  try {
+    return execFileSync("git", ["status", "--short"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      shell: process.platform === "win32",
+    }).trim();
+  } catch {
+    console.error("Cannot bump version: unable to read Git status.");
+    process.exit(1);
+  }
+}
