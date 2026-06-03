@@ -1,5 +1,14 @@
 # Changelog
 
+# 🗒️ [3.1.0] - 2026-06-03
+### Changed
+
+- Copy Husky hooks into consuming projects in both install modes.
+
+### Removed
+
+- Remove duplicated ```dx-flow hook:*``` commands and ```scripts/hooks``` files.
+
 # 🗒️ [3.0.0] - 2026-05-18
 ### Added
 - Install mode choice: copy scripts or install dx-flow as a project dependency.
@@ -11,7 +20,6 @@
 ### Changed
 - CLI compatibility for Linux, Windows, and macOS.
 - QA and release scripts inside dx-flow in dependency mode.
-- Update Husky hooks to call dx-flow commands in dependency mode.
 - Replace Unix-only skip-test alias with cross-platform CLI command.
 
 
