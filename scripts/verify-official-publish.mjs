@@ -12,6 +12,7 @@ const officialPackageName = "@keyobs/dx-flow";
 const officialRemotes = new Set([
   "git@github.com:keyobs/dx-flow.git",
   "git+ssh://git@github.com/keyobs/dx-flow.git",
+  "https://github.com/keyobs/dx-flow",
   "https://github.com/keyobs/dx-flow.git",
 ]);
 
