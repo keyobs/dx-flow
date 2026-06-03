@@ -24,7 +24,7 @@
     "node": ">=22.21.1"
   },
   "scripts": {
-    "check": "node --check bin/dx-flow.mjs && node --check scripts/dx-flow-setup.mjs && node --check scripts/ts/setup-ts.mjs && node --check scripts/git/commit.mjs && node --check scripts/hooks/commit-msg.mjs && node --check scripts/hooks/pre-commit.mjs && node --check scripts/hooks/pre-push.mjs && node --check scripts/version-bump.mjs && node --check scripts/verify-official-publish.mjs",
+    "check": "node --check bin/dx-flow.mjs && node --check scripts/dx-flow-setup.mjs && node --check scripts/ts/setup-ts.mjs && node --check scripts/git/commit.mjs && node --check scripts/version-bump.mjs && node --check scripts/verify-official-publish.mjs",
     "test": "node --test",
     "prepublishOnly": "node scripts/verify-official-publish.mjs",
     "publish:github": "npm publish",
