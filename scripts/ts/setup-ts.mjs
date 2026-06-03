@@ -10,6 +10,7 @@ import readline from 'node:readline';
 
 const isWindows = process.platform === 'win32';
 const dxFlowPackageName = '@keyobs/dx-flow';
+const dxFlowVersion = await readDxFlowVersion();
 const args = process.argv.slice(2);
 const { force, projectDir, framework, mode } = parseArgs(args);
 
@@ -281,13 +282,19 @@ async function ensureGitHubPackagesNpmrc(projectRoot) {
 
 async function installDxFlowDependency(pm) {
   try {
-    await runInstall(pm, [`${dxFlowPackageName}@latest`]);
+    await runInstall(pm, [`${dxFlowPackageName}@${dxFlowVersion}`]);
     return true;
   } catch {
-    console.error(`❌ Could not install ${dxFlowPackageName} from GitHub Packages.`);
+    console.error(`❌ Could not install ${dxFlowPackageName}@${dxFlowVersion} from GitHub Packages.`);
     console.error('Make sure your package manager is authenticated with a GitHub token that has read:packages.');
     return false;
   }
+}
+
+async function readDxFlowVersion() {
+  const packageJsonPath = join(dirname(fileURLToPath(import.meta.url)), '../../package.json');
+  const pkg = JSON.parse(await readFile(packageJsonPath, 'utf8'));
+  return pkg.version;
 }
 
 function promptCopyFallback() {
