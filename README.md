@@ -1,5 +1,5 @@
 # DX-FLOW
-*DX for Developper Experience*
+*DX for Developer Experience*
 
 dx-flow is a Node CLI that bootstraps code quality, Git hooks, versioning, and release workflows for JS/TS projects.
 
@@ -33,7 +33,9 @@ The setup asks for:
 
 Install modes:
 - `copy`: default mode; copies QA and release scripts into the consuming project.
-- `dependency`: installs `@keyobs/dx-flow` as a dev dependency; QA, release, and hook commands run through the `dx-flow` binary.
+- `dependency`: installs `@keyobs/dx-flow` as a dev dependency; QA and release scripts run through the `dx-flow` binary.
+
+In both modes, Husky hooks are copied into the consuming project so they stay visible and editable.
 
 Non-interactive examples:
 
@@ -75,7 +77,7 @@ Supported package managers:
 - **Main Branch**: Blocks direct commits and pushes to `main`.
 - **Secrets**: Blocks commits containing `.env` files.
 - **Types**: Runs `tsc --noEmit` before committing.
-- **Tests**: Enforces `npm run test:run` before pushing to `develop`.
+- **Tests**: Enforces `test:run` before pushing to `develop`.
 - **Commits**: Validates conventional commit formats.
 
 <br>
@@ -243,7 +245,7 @@ dx-flow run
 
 🪲 Debug
 
-In local dev mode, if the install exits whith error, try refresh the node modules.
+In local dev mode, if the install exits with error, try refresh the node modules.
 
 Clean node modules :
 ```
