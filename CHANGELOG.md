@@ -5,6 +5,10 @@
 
 - Copy Husky hooks into consuming projects in both install modes.
 
+### Added
+
+- Publish package automatically to GitHub Packages when a version tag is pushed.
+
 ### Removed
 
 - Remove duplicated ```dx-flow hook:*``` commands and ```scripts/hooks``` files.

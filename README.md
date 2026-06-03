@@ -220,7 +220,17 @@ If installing `@keyobs/dx-flow` fails, dx-flow offers to continue in `copy` mode
 
 The repository can be public, but the official package distribution is controlled by the `@keyobs` scope on GitHub Packages.
 
-Publish the official package:
+Publishing is automated by GitHub Actions when a version tag is pushed:
+
+```
+npm run release:minor
+git push
+git push --tags
+```
+
+The tag must match the `package.json` version. For example, tag `v3.1.0` publishes package version `3.1.0`.
+
+Manual publish is still available:
 
 ```
 npm run publish:github
