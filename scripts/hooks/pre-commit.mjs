@@ -5,6 +5,7 @@ import { existsSync } from "node:fs";
 import process from "node:process";
 
 const isWindows = process.platform === "win32";
+const packageManager = detectPackageManager();
 
 function run(cmd, args, opts) {
   return spawnSync(cmd, args, { stdio: "inherit", shell: isWindows, ...opts });
@@ -12,6 +13,20 @@ function run(cmd, args, opts) {
 
 function git(args) {
   return spawnSync("git", args, { encoding: "utf8", shell: isWindows });
+}
+
+function detectPackageManager() {
+  if (existsSync("pnpm-lock.yaml")) return "pnpm";
+  if (existsSync("yarn.lock")) return "yarn";
+  if (existsSync("bun.lockb") || existsSync("bun.lock")) return "bun";
+  return "npm";
+}
+
+function execPackage(binary, args = []) {
+  if (packageManager === "pnpm") return run("pnpm", ["exec", binary, ...args]);
+  if (packageManager === "yarn") return run("yarn", [binary, ...args]);
+  if (packageManager === "bun") return run("bunx", [binary, ...args]);
+  return run("npx", [binary, ...args]);
 }
 
 console.log("🚦 Pre-commit sanity check...");
@@ -34,7 +49,7 @@ if (hasEnvFile) {
 }
 
 console.log("🧹 Linting & Formatting...");
-const lintResult = run("npx", ["lint-staged"]);
+const lintResult = execPackage("lint-staged");
 if (lintResult.status !== 0) process.exit(lintResult.status ?? 1);
 
 const skipTests =
@@ -51,7 +66,8 @@ if (skipTests) {
     if (existsSync("./jest.config.js")) jestArgs.push("--config", "./jest.config.js");
     else if (existsSync("./config/jest.config.js")) jestArgs.push("--config", "./config/jest.config.js");
     jestArgs.push("--findRelatedTests", ...stagedJs, "--passWithNoTests");
-    const jestResult = run("npx", jestArgs);
+    const [jestBinary, ...jestOptions] = jestArgs;
+    const jestResult = execPackage(jestBinary, jestOptions);
     if (jestResult.status !== 0) process.exit(jestResult.status ?? 1);
   } else {
     console.log("ℹ️ No JS/TS files staged for tests.");
@@ -61,10 +77,10 @@ if (skipTests) {
 console.log("🎓 Type checking...");
 const stagedTs = stagedFiles.filter((file) => /\.(ts|tsx)$/.test(file));
 if (stagedTs.length > 0) {
-  const tscResult = run("npx", ["tsc", "--noEmit", "--pretty", "false"]);
+  const tscResult = execPackage("tsc", ["--noEmit", "--pretty", "false"]);
   if (tscResult.status !== 0) process.exit(tscResult.status ?? 1);
 } else {
   console.log("ℹ️ No TS files staged for type checking.");
 }
 
-console.log("🎉 Pre-commit checks passed. Commiting...");
+console.log("🎉 Pre-commit checks passed. Committing...");

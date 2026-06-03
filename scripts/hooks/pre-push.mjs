@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import process from "node:process";
 
 const isWindows = process.platform === "win32";
+const packageManager = detectPackageManager();
 
 function run(cmd, args, opts) {
   return spawnSync(cmd, args, { stdio: "inherit", shell: isWindows, ...opts });
@@ -12,6 +13,20 @@ function run(cmd, args, opts) {
 
 function git(args) {
   return spawnSync("git", args, { encoding: "utf8", shell: isWindows });
+}
+
+function detectPackageManager() {
+  if (existsSync("pnpm-lock.yaml")) return "pnpm";
+  if (existsSync("yarn.lock")) return "yarn";
+  if (existsSync("bun.lockb") || existsSync("bun.lock")) return "bun";
+  return "npm";
+}
+
+function runScript(scriptName) {
+  if (packageManager === "pnpm") return run("pnpm", ["run", scriptName]);
+  if (packageManager === "yarn") return run("yarn", [scriptName]);
+  if (packageManager === "bun") return run("bun", ["run", scriptName]);
+  return run("npm", ["run", scriptName]);
 }
 
 const branch = git(["rev-parse", "--abbrev-ref", "HEAD"]).stdout.trim();
@@ -34,7 +49,7 @@ function hasTestRunScript() {
 
 if (!hasTestRunScript()) process.exit(0);
 
-const testResult = run("npm", ["run", "test:run"]);
+const testResult = runScript("test:run");
 
 if (branch === "develop") {
   if (testResult.status !== 0) {
