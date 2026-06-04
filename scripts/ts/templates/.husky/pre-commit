@@ -1,88 +1,50 @@
 #!/usr/bin/env sh
 
-node <<'DX_FLOW_HOOK'
-'use strict';
-const { spawnSync } = require('node:child_process');
-const { existsSync } = require('node:fs');
-
-const isWindows = process.platform === 'win32';
-const packageManager = detectPackageManager();
-
-function run(cmd, args, opts) {
-  return spawnSync(cmd, args, { stdio: 'inherit', shell: isWindows, ...opts });
+run_exec() {
+  if [ -f pnpm-lock.yaml ]; then
+    pnpm exec "$@"
+  elif [ -f yarn.lock ]; then
+    yarn "$@"
+  elif [ -f bun.lockb ] || [ -f bun.lock ]; then
+    bunx "$@"
+  else
+    npx "$@"
+  fi
 }
 
-function git(args) {
-  return spawnSync('git', args, { encoding: 'utf8', shell: isWindows });
-}
+echo "🚦 Pre-commit sanity check..."
 
-function detectPackageManager() {
-  if (existsSync('pnpm-lock.yaml')) return 'pnpm';
-  if (existsSync('yarn.lock')) return 'yarn';
-  if (existsSync('bun.lockb') || existsSync('bun.lock')) return 'bun';
-  return 'npm';
-}
+branch="$(git rev-parse --abbrev-ref HEAD)"
 
-function execPackage(binary, args = []) {
-  if (packageManager === 'pnpm') return run('pnpm', ['exec', binary, ...args]);
-  if (packageManager === 'yarn') return run('yarn', [binary, ...args]);
-  if (packageManager === 'bun') return run('bunx', [binary, ...args]);
-  return run('npx', [binary, ...args]);
-}
+if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
+  echo "🔒 Don't commit to $branch."
+  exit 1
+fi
 
-console.log('🚦 Pre-commit sanity check...');
+staged_files="$(git diff --cached --name-only)"
 
-const branch = git(['rev-parse', '--abbrev-ref', 'HEAD']).stdout.trim();
+if printf "%s\n" "$staged_files" | grep -E '^\.env(\.|$)' >/dev/null; then
+  echo "❌ Error: You are attempting to commit a .env file!"
+  exit 1
+fi
 
-if (branch === 'main' || branch === 'master') {
-  console.log(`🔒 Don't commit to ${branch}.`);
-  process.exit(1);
-}
+echo "🧹 Linting & formatting staged files..."
+run_exec lint-staged
+status=$?
+if [ "$status" -ne 0 ]; then
+  exit "$status"
+fi
 
-const stagedFiles = git(['diff', '--cached', '--name-only'])
-  .stdout.split('\n')
-  .filter(Boolean);
+staged_ts="$(printf "%s\n" "$staged_files" | grep -E '\.(ts|tsx)$' || true)"
+if [ -n "$staged_ts" ]; then
+  echo "🎓 Type checking..."
+  run_exec tsc --noEmit --pretty false
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    exit "$status"
+  fi
+else
+  echo "ℹ️ No TS files staged for type checking."
+fi
 
-const hasEnvFile = stagedFiles.some(f => f === '.env' || /^\.env\./.test(f));
-if (hasEnvFile) {
-  console.log('❌ Error: You are attempting to commit a .env file!');
-  process.exit(1);
-}
-
-console.log('🧹 Linting & Formatting...');
-const lintResult = execPackage('lint-staged');
-if (lintResult.status !== 0) process.exit(lintResult.status ?? 1);
-
-const skipTests =
-  process.env.SKIP_TESTS === '1' ||
-  git(['config', 'hooks.skiptests']).stdout.trim() === '1';
-
-if (skipTests) {
-  console.log('⏭️  Skipping tests.');
-} else {
-  console.log('🧪 Tests for staged files...');
-  const stagedJs = stagedFiles.filter(f => /\.(js|jsx|ts|tsx)$/.test(f));
-  if (stagedJs.length > 0) {
-    const jestArgs = ['jest'];
-    if (existsSync('./jest.config.js')) jestArgs.push('--config', './jest.config.js');
-    else if (existsSync('./config/jest.config.js')) jestArgs.push('--config', './config/jest.config.js');
-    jestArgs.push('--findRelatedTests', ...stagedJs, '--passWithNoTests');
-    const [jestBinary, ...jestOptions] = jestArgs;
-    const jestResult = execPackage(jestBinary, jestOptions);
-    if (jestResult.status !== 0) process.exit(jestResult.status ?? 1);
-  } else {
-    console.log('ℹ️ No JS/TS files staged for tests.');
-  }
-}
-
-console.log('🎓 Type checking...');
-const stagedTs = stagedFiles.filter(f => /\.(ts|tsx)$/.test(f));
-if (stagedTs.length > 0) {
-  const tscResult = execPackage('tsc', ['--noEmit', '--pretty', 'false']);
-  if (tscResult.status !== 0) process.exit(tscResult.status ?? 1);
-} else {
-  console.log('ℹ️ No TS files staged for type checking.');
-}
-
-console.log('🎉 Pre-commit checks passed. Committing...');
-DX_FLOW_HOOK
+echo "🎉 Pre-commit checks passed."

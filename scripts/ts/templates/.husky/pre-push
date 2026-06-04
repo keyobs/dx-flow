@@ -1,65 +1,50 @@
 #!/usr/bin/env sh
 
-node <<'DX_FLOW_HOOK'
-'use strict';
-const { spawnSync } = require('node:child_process');
-const { existsSync, readFileSync } = require('node:fs');
-
-const isWindows = process.platform === 'win32';
-const packageManager = detectPackageManager();
-
-function run(cmd, args, opts) {
-  return spawnSync(cmd, args, { stdio: 'inherit', shell: isWindows, ...opts });
+run_script() {
+  if [ -f pnpm-lock.yaml ]; then
+    pnpm run "$1"
+  elif [ -f yarn.lock ]; then
+    yarn "$1"
+  elif [ -f bun.lockb ] || [ -f bun.lock ]; then
+    bun run "$1"
+  else
+    npm run "$1"
+  fi
 }
 
-function git(args) {
-  return spawnSync('git', args, { encoding: 'utf8', shell: isWindows });
+has_script() {
+  node -e "const pkg = require('./package.json'); process.exit(pkg.scripts && pkg.scripts['$1'] ? 0 : 1)"
 }
 
-function detectPackageManager() {
-  if (existsSync('pnpm-lock.yaml')) return 'pnpm';
-  if (existsSync('yarn.lock')) return 'yarn';
-  if (existsSync('bun.lockb') || existsSync('bun.lock')) return 'bun';
-  return 'npm';
-}
+branch="$(git rev-parse --abbrev-ref HEAD)"
 
-function runScript(scriptName) {
-  if (packageManager === 'pnpm') return run('pnpm', ['run', scriptName]);
-  if (packageManager === 'yarn') return run('yarn', [scriptName]);
-  if (packageManager === 'bun') return run('bun', ['run', scriptName]);
-  return run('npm', ['run', scriptName]);
-}
+if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
+  echo "🔒 Don't push to $branch."
+  exit 1
+fi
 
-const branch = git(['rev-parse', '--abbrev-ref', 'HEAD']).stdout.trim();
+echo "🧹 DX-FLOW: Running lint fix..."
+if has_script lint:fix; then
+  run_script lint:fix
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    exit "$status"
+  fi
+fi
 
-if (branch === 'main' || branch === 'master') {
-  console.log(`🔒 Don't push to ${branch}.`);
-  process.exit(1);
-}
+echo "🧐 DX-FLOW: Running tests..."
+if ! has_script test:run; then
+  exit 0
+fi
 
-console.log('🧐 DX-FLOW: Running tests...');
+run_script test:run
+status=$?
 
-function hasTestRunScript() {
-  try {
-    const pkg = JSON.parse(readFileSync('./package.json', 'utf8'));
-    return Boolean(pkg.scripts && pkg.scripts['test:run']);
-  } catch {
-    return false;
-  }
-}
+if [ "$branch" = "develop" ] && [ "$status" -ne 0 ]; then
+  echo "☠️ Tests failed. Push to develop aborted."
+  exit 1
+fi
 
-if (!hasTestRunScript()) process.exit(0);
-
-const testResult = runScript('test:run');
-
-if (branch === 'develop') {
-  if (testResult.status !== 0) {
-    console.log('☠️ Tests failed. Push to develop aborted.');
-    process.exit(1);
-  }
-} else {
-  if (testResult.status !== 0) {
-    console.log(`⚠️ Tests failed, but allowing push on ${branch}.`);
-  }
-}
-DX_FLOW_HOOK
+if [ "$status" -ne 0 ]; then
+  echo "⚠️ Tests failed, but allowing push on $branch."
+fi

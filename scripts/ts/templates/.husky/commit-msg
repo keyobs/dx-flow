@@ -1,26 +1,14 @@
 #!/usr/bin/env sh
-export DX_FLOW_COMMIT_MSG_FILE="$1"
 
-node <<'DX_FLOW_HOOK'
-'use strict';
-const { spawnSync } = require('node:child_process');
+echo "📝 Validating commit message..."
 
-const isWindows = process.platform === 'win32';
-const commitMsgFile = process.env.DX_FLOW_COMMIT_MSG_FILE;
+npx --no -- commitlint --edit "$1"
+status=$?
 
-console.log('📝 Validating commit message...');
-
-const result = spawnSync(
-  'npx',
-  ['--no', '--', 'commitlint', '--edit', commitMsgFile],
-  { stdio: 'inherit', shell: isWindows }
-);
-
-if (result.status === 0) {
-  console.log('✅ Commit message follows conventional standards.');
-} else {
-  console.log('❌ Invalid commit format!');
-  console.log('💡 Use: <type>(<scope>): tell why you changed that');
-  process.exit(1);
-}
-DX_FLOW_HOOK
+if [ "$status" -eq 0 ]; then
+  echo "✅ Commit message follows conventional standards."
+else
+  echo "❌ Invalid commit format!"
+  echo "💡 Use: <type>(<scope>): tell why you changed that"
+  exit "$status"
+fi

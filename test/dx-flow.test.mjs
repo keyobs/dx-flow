@@ -62,26 +62,41 @@ test("husky hooks support npm, pnpm, yarn, and bun commands", () => {
     assert.match(content, /bun\.lock/);
   }
 
-  assert.match(preCommit, /pnpm'.*\['exec', binary/s);
-  assert.match(preCommit, /yarn'.*\[binary, \.\.\.args/s);
-  assert.match(preCommit, /bunx'.*\[binary, \.\.\.args/s);
-  assert.doesNotMatch(preCommit, /run\('npx', \['lint-staged'\]\)/);
+  assert.match(preCommit, /pnpm exec "\$@"/);
+  assert.match(preCommit, /yarn "\$@"/);
+  assert.match(preCommit, /bunx "\$@"/);
+  assert.match(preCommit, /npx "\$@"/);
 
-  assert.match(prePush, /pnpm'.*\['run', scriptName/s);
-  assert.match(prePush, /yarn'.*\[scriptName/s);
-  assert.match(prePush, /bun'.*\['run', scriptName/s);
-  assert.doesNotMatch(prePush, /run\('npm', \['run', 'test:run'\]\)/);
+  assert.match(prePush, /pnpm run "\$1"/);
+  assert.match(prePush, /yarn "\$1"/);
+  assert.match(prePush, /bun run "\$1"/);
+  assert.match(prePush, /npm run "\$1"/);
 });
 
-test("husky hook templates are shell scripts that run node", () => {
+test("husky hook templates are simple shell scripts", () => {
   for (const hookName of ["commit-msg", "pre-commit", "pre-push"]) {
     const content = readFileSync(join(rootDir, "scripts/ts/templates/.husky", hookName), "utf8");
     const [firstLine, secondLine] = content.split("\n");
     assert.equal(firstLine, "#!/usr/bin/env sh");
     assert.notEqual(secondLine, "'use strict';");
-    assert.match(content, /node <<'DX_FLOW_HOOK'/);
-    assert.match(content, /DX_FLOW_HOOK\s*$/);
+    assert.doesNotMatch(content, /node <<'DX_FLOW_HOOK'/);
+    assert.doesNotMatch(content, /jest/);
   }
+});
+
+test("pre-commit runs lint-staged and typechecks only staged TS files", () => {
+  const preCommit = readFileSync(join(rootDir, "scripts/ts/templates/.husky/pre-commit"), "utf8");
+  assert.match(preCommit, /run_exec lint-staged/);
+  assert.match(preCommit, /grep -E '\\\.\(ts\|tsx\)\$'/);
+  assert.match(preCommit, /run_exec tsc --noEmit --pretty false/);
+});
+
+test("pre-push runs lint:fix and test:run when scripts exist", () => {
+  const prePush = readFileSync(join(rootDir, "scripts/ts/templates/.husky/pre-push"), "utf8");
+  assert.match(prePush, /has_script lint:fix/);
+  assert.match(prePush, /run_script lint:fix/);
+  assert.match(prePush, /has_script test:run/);
+  assert.match(prePush, /run_script test:run/);
 });
 
 test("hook commands are backward-compatible aliases to templates", () => {
