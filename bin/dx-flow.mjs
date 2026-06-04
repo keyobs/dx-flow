@@ -30,6 +30,12 @@ if (command === 'run') {
   runRelease(args.slice(1));
 } else if (command === 'commit') {
   runScript('../scripts/git/commit.mjs', args.slice(1), 'scripts/git/');
+} else if (command === 'hook:commit-msg') {
+  runScript('../scripts/ts/templates/.husky/commit-msg', args.slice(1), 'scripts/ts/templates/.husky/');
+} else if (command === 'hook:pre-commit') {
+  runScript('../scripts/ts/templates/.husky/pre-commit', args.slice(1), 'scripts/ts/templates/.husky/');
+} else if (command === 'hook:pre-push') {
+  runScript('../scripts/ts/templates/.husky/pre-push', args.slice(1), 'scripts/ts/templates/.husky/');
 } else {
   console.log('Usage: dx-flow <command> [options]');
   console.log('\nCommands:');

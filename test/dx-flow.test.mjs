@@ -73,11 +73,14 @@ test("husky hooks support npm, pnpm, yarn, and bun commands", () => {
   assert.doesNotMatch(prePush, /run\('npm', \['run', 'test:run'\]\)/);
 });
 
-test("hook commands are not exposed because templates are the single source of truth", () => {
+test("hook commands are backward-compatible aliases to templates", () => {
   const cli = readFileSync(join(rootDir, "bin/dx-flow.mjs"), "utf8");
-  assert.doesNotMatch(cli, /hook:commit-msg/);
-  assert.doesNotMatch(cli, /hook:pre-commit/);
-  assert.doesNotMatch(cli, /hook:pre-push/);
+  assert.match(cli, /hook:commit-msg/);
+  assert.match(cli, /scripts\/ts\/templates\/\.husky\/commit-msg/);
+  assert.match(cli, /hook:pre-commit/);
+  assert.match(cli, /scripts\/ts\/templates\/\.husky\/pre-commit/);
+  assert.match(cli, /hook:pre-push/);
+  assert.match(cli, /scripts\/ts\/templates\/\.husky\/pre-push/);
   assert.equal(existsSync(join(rootDir, "scripts/hooks")), false);
 });
 
