@@ -1,5 +1,12 @@
 # Changelog
 
+# 🗒️ [3.1.2] - 2026-06-04
+### Changed
+- Rewrite Husky templates as simple shell scripts.
+- Remove Jest from pre-commit checks.
+- Run typecheck only when staged TypeScript files are present.
+- Run ```lint:fix``` before ```test:run``` on pre-push when scripts exist.
+
 
 # 🗒️ [3.1.1] - 2026-06-04
 ### Changed
