@@ -3,7 +3,8 @@
 
 # 🗒️ [3.1.1] - 2026-06-04
 ### Changed
-- Copy Templates husly, biome, commitlint in both install mode
+- Copy templates for Husky, Biome, and Commitlint in both install modes.
+- Keep Husky hook files shell-compatible while running Node logic internally.
 
 
 # 🗒️ [3.1.0] - 2026-06-03
