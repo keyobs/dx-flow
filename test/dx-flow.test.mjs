@@ -81,6 +81,22 @@ test("hook commands are not exposed because templates are the single source of t
   assert.equal(existsSync(join(rootDir, "scripts/hooks")), false);
 });
 
+test("setup asks before overwriting existing husky hooks", () => {
+  const setup = readFileSync(join(rootDir, "scripts/ts/setup-ts.mjs"), "utf8");
+  assert.match(setup, /copyHookTemplate\(join\(huskyDir, 'commit-msg'\), join\(projectRoot, '\.husky\/commit-msg'\), allowForce\)/);
+  assert.match(setup, /copyHookTemplate\(join\(huskyDir, 'pre-commit'\), join\(projectRoot, '\.husky\/pre-commit'\), allowForce\)/);
+  assert.match(setup, /copyHookTemplate\(join\(huskyDir, 'pre-push'\), join\(projectRoot, '\.husky\/pre-push'\), allowForce\)/);
+  assert.match(setup, /Overwrite existing \$\{filePath\}\? \[y\/N\]/);
+});
+
+test("setup asks before overwriting biome and commitlint configs", () => {
+  const setup = readFileSync(join(rootDir, "scripts/ts/setup-ts.mjs"), "utf8");
+  assert.match(setup, /copyPromptedTemplate\(\s*join\(templateDir, biomeTemplate\),\s*join\(resolvedProjectDir, 'biome\.json'\),\s*force\s*\)/s);
+  assert.match(setup, /copyPromptedTemplate\(\s*join\(templateDir, 'commitlint\.config\.mjs'\),\s*join\(resolvedProjectDir, 'commitlint\.config\.mjs'\),\s*force\s*\)/s);
+  assert.match(setup, /const biomeCopied = await copyFrameworkConfig\(framework\);/);
+  assert.match(setup, /if \(biomeCopied\) await updateBiomeSchema\(\);/);
+});
+
 function makeTempProject(pkg = {}) {
   const tempDir = mkdtempSync(join(tmpdir(), "dx-flow-test-"));
   writeFileSync(

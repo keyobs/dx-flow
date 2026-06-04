@@ -45,9 +45,13 @@ if (effectiveMode === 'dependency') {
   }
 }
 
-await copyFrameworkConfig(framework);
-await updateBiomeSchema();
-await copyTemplateFile(join(templateDir, 'commitlint.config.mjs'), join(resolvedProjectDir, 'commitlint.config.mjs'));
+const biomeCopied = await copyFrameworkConfig(framework);
+if (biomeCopied) await updateBiomeSchema();
+await copyPromptedTemplate(
+  join(templateDir, 'commitlint.config.mjs'),
+  join(resolvedProjectDir, 'commitlint.config.mjs'),
+  force
+);
 
 console.log('Adding node commands...');
 await updatePackageJson(resolvedProjectDir, force, effectiveMode);
@@ -117,9 +121,10 @@ async function copyFrameworkConfig(selectedFramework) {
     biomeTemplate = 'typescript/biome.json';
   }
 
-  await copyTemplateFile(
+  return copyPromptedTemplate(
     join(templateDir, biomeTemplate),
-    join(resolvedProjectDir, 'biome.json')
+    join(resolvedProjectDir, 'biome.json'),
+    force
   );
 }
 
@@ -147,18 +152,19 @@ async function getBiomeVersion() {
   }
 }
 
-async function copyTemplateFile(src, dest) {
-  if (existsSync(dest) && !force) {
+async function copyTemplateFile(src, dest, allowOverwrite = force) {
+  if (existsSync(dest) && !allowOverwrite) {
     console.log(`⚠️  ${dest} already exists. Skipping...`);
-    return;
+    return false;
   }
   if (!existsSync(src)) {
     console.log(`❌ Missing template: ${src}`);
-    return;
+    return false;
   }
   await mkdir(dirname(dest), { recursive: true });
   await copyFileFs(src, dest);
   console.log(`✅ Installed: ${dest}`);
+  return true;
 }
 
 async function copyTemplateDir(src, dest, allowForce) {
@@ -226,9 +232,9 @@ async function configureHusky(projectRoot, huskyDir, allowForce) {
   console.log('Configuring Husky hooks...');
   await runPackageExecutor(packageManager, 'husky', [], { cwd: projectRoot });
 
-  await copyTemplateFile(join(huskyDir, 'commit-msg'), join(projectRoot, '.husky/commit-msg'));
-  await copyTemplateFile(join(huskyDir, 'pre-commit'), join(projectRoot, '.husky/pre-commit'));
-  await copyTemplateFile(join(huskyDir, 'pre-push'), join(projectRoot, '.husky/pre-push'));
+  await copyHookTemplate(join(huskyDir, 'commit-msg'), join(projectRoot, '.husky/commit-msg'), allowForce);
+  await copyHookTemplate(join(huskyDir, 'pre-commit'), join(projectRoot, '.husky/pre-commit'), allowForce);
+  await copyHookTemplate(join(huskyDir, 'pre-push'), join(projectRoot, '.husky/pre-push'), allowForce);
 
   await safeChmod(join(projectRoot, '.husky/commit-msg'));
   await safeChmod(join(projectRoot, '.husky/pre-commit'));
@@ -241,6 +247,42 @@ async function safeChmod(filePath) {
   } catch {
     // Ignore chmod errors on unsupported platforms.
   }
+}
+
+async function copyHookTemplate(src, dest, allowForce) {
+  if (!existsSync(dest) || allowForce) {
+    return copyTemplateFile(src, dest, true);
+  }
+
+  const shouldOverwrite = await promptOverwrite(dest);
+  if (shouldOverwrite) {
+    return copyTemplateFile(src, dest, true);
+  }
+  console.log(`⚠️  ${dest} already exists. Skipping...`);
+  return false;
+}
+
+async function copyPromptedTemplate(src, dest, allowForce) {
+  if (!existsSync(dest) || allowForce) {
+    return copyTemplateFile(src, dest, true);
+  }
+
+  const shouldOverwrite = await promptOverwrite(dest);
+  if (shouldOverwrite) {
+    return copyTemplateFile(src, dest, true);
+  }
+  console.log(`⚠️  ${dest} already exists. Skipping...`);
+  return false;
+}
+
+function promptOverwrite(filePath) {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(`Overwrite existing ${filePath}? [y/N] `, (answer) => {
+      rl.close();
+      resolve(answer.trim().toLowerCase() === 'y');
+    });
+  });
 }
 
 function detectPackageManager(projectRoot) {
