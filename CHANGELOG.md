@@ -1,5 +1,11 @@
 # Changelog
 
+
+# 🗒️ [3.1.1] - 2026-06-04
+### Changed
+- Copy Templates husly, biome, commitlint in both install mode
+
+
 # 🗒️ [3.1.0] - 2026-06-03
 ### Changed
 
