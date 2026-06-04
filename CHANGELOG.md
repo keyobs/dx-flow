@@ -16,10 +16,11 @@
 ### Added
 
 - Publish package automatically to GitHub Packages when a version tag is pushed.
+- Keep ```dx-flow hook:*``` as backward-compatible aliases to Husky templates.
 
 ### Removed
 
-- Remove duplicated ```dx-flow hook:*``` commands and ```scripts/hooks``` files.
+- Remove duplicated ```scripts/hooks``` files.
 
 # 🗒️ [3.0.0] - 2026-05-18
 ### Added
