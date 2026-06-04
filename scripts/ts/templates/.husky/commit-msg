@@ -1,9 +1,12 @@
-#!/usr/bin/env node
+#!/usr/bin/env sh
+export DX_FLOW_COMMIT_MSG_FILE="$1"
+
+node <<'DX_FLOW_HOOK'
 'use strict';
 const { spawnSync } = require('node:child_process');
 
 const isWindows = process.platform === 'win32';
-const commitMsgFile = process.argv[2];
+const commitMsgFile = process.env.DX_FLOW_COMMIT_MSG_FILE;
 
 console.log('📝 Validating commit message...');
 
@@ -20,3 +23,4 @@ if (result.status === 0) {
   console.log('💡 Use: <type>(<scope>): tell why you changed that');
   process.exit(1);
 }
+DX_FLOW_HOOK

@@ -31,11 +31,11 @@ if (command === 'run') {
 } else if (command === 'commit') {
   runScript('../scripts/git/commit.mjs', args.slice(1), 'scripts/git/');
 } else if (command === 'hook:commit-msg') {
-  runScript('../scripts/ts/templates/.husky/commit-msg', args.slice(1), 'scripts/ts/templates/.husky/');
+  runHookTemplate('../scripts/ts/templates/.husky/commit-msg', args.slice(1));
 } else if (command === 'hook:pre-commit') {
-  runScript('../scripts/ts/templates/.husky/pre-commit', args.slice(1), 'scripts/ts/templates/.husky/');
+  runHookTemplate('../scripts/ts/templates/.husky/pre-commit', args.slice(1));
 } else if (command === 'hook:pre-push') {
-  runScript('../scripts/ts/templates/.husky/pre-push', args.slice(1), 'scripts/ts/templates/.husky/');
+  runHookTemplate('../scripts/ts/templates/.husky/pre-push', args.slice(1));
 } else {
   console.log('Usage: dx-flow <command> [options]');
   console.log('\nCommands:');
@@ -73,6 +73,16 @@ function runScript(relativePath, scriptArgs, errorDir) {
   }
 
   runCommand(process.execPath, [scriptPath, ...scriptArgs]);
+}
+
+function runHookTemplate(relativePath, hookArgs) {
+  const scriptPath = join(__dirname, relativePath);
+  if (!existsSync(scriptPath)) {
+    console.error('❌ Hook template not found in scripts/ts/templates/.husky/');
+    process.exit(1);
+  }
+
+  runCommand('sh', [scriptPath, ...hookArgs]);
 }
 
 function runCommand(commandName, commandArgs) {

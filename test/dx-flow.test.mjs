@@ -73,6 +73,17 @@ test("husky hooks support npm, pnpm, yarn, and bun commands", () => {
   assert.doesNotMatch(prePush, /run\('npm', \['run', 'test:run'\]\)/);
 });
 
+test("husky hook templates are shell scripts that run node", () => {
+  for (const hookName of ["commit-msg", "pre-commit", "pre-push"]) {
+    const content = readFileSync(join(rootDir, "scripts/ts/templates/.husky", hookName), "utf8");
+    const [firstLine, secondLine] = content.split("\n");
+    assert.equal(firstLine, "#!/usr/bin/env sh");
+    assert.notEqual(secondLine, "'use strict';");
+    assert.match(content, /node <<'DX_FLOW_HOOK'/);
+    assert.match(content, /DX_FLOW_HOOK\s*$/);
+  }
+});
+
 test("hook commands are backward-compatible aliases to templates", () => {
   const cli = readFileSync(join(rootDir, "bin/dx-flow.mjs"), "utf8");
   assert.match(cli, /hook:commit-msg/);
@@ -81,6 +92,7 @@ test("hook commands are backward-compatible aliases to templates", () => {
   assert.match(cli, /scripts\/ts\/templates\/\.husky\/pre-commit/);
   assert.match(cli, /hook:pre-push/);
   assert.match(cli, /scripts\/ts\/templates\/\.husky\/pre-push/);
+  assert.match(cli, /runCommand\('sh', \[scriptPath, \.\.\.hookArgs\]\)/);
   assert.equal(existsSync(join(rootDir, "scripts/hooks")), false);
 });
 

@@ -1,4 +1,6 @@
-#!/usr/bin/env node
+#!/usr/bin/env sh
+
+node <<'DX_FLOW_HOOK'
 'use strict';
 const { spawnSync } = require('node:child_process');
 const { existsSync } = require('node:fs');
@@ -83,3 +85,4 @@ if (stagedTs.length > 0) {
 }
 
 console.log('🎉 Pre-commit checks passed. Committing...');
+DX_FLOW_HOOK

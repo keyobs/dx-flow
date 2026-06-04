@@ -1,4 +1,6 @@
-#!/usr/bin/env node
+#!/usr/bin/env sh
+
+node <<'DX_FLOW_HOOK'
 'use strict';
 const { spawnSync } = require('node:child_process');
 const { existsSync, readFileSync } = require('node:fs');
@@ -60,3 +62,4 @@ if (branch === 'develop') {
     console.log(`⚠️ Tests failed, but allowing push on ${branch}.`);
   }
 }
+DX_FLOW_HOOK
