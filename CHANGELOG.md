@@ -4,6 +4,8 @@
 ### Changed
 
 - Copy Husky hooks into consuming projects in both install modes.
+- Ask before overwriting existing Husky hooks during setup; `--force` overwrites without prompts.
+- Ask before overwriting existing Biome and Commitlint configs during setup.
 
 ### Added
 

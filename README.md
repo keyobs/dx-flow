@@ -114,7 +114,9 @@ scripts/ts/templates/.husky/pre-commit
 scripts/ts/templates/.husky/pre-push
 ```
 
-These files are copied as-is into consuming projects in both `copy` and `dependency` modes.
+These files are copied as-is into consuming projects in both `copy` and `dependency` modes. When a hook already exists, dx-flow asks before overwriting it. Use `--force` to overwrite without prompts.
+
+The same overwrite rule applies to managed config files such as `biome.json` and `commitlint.config.mjs`.
 
 <br>
 
